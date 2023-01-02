@@ -1,0 +1,29 @@
+{
+  "name": "example-safe-settings-sam-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GitHub Safe Settings App",
+  "main": "./node_modules/safe-settings/index.js",
+  "scripts": {
+    "start": "probot run ./node_modules/safe-settings/index.js",
+    "dev": "nodemon --inspect"
+  },
+  "dependencies": {
+    "@probot/adapter-aws-lambda-serverless": "^3.0.0",
+    "safe-settings": "github:github/safe-settings#2.0.20-alpha.4"
+  },
+  "repository": "github:anderssonjohan/example-safe-settings-sam-app",
+  "keywords": [],
+  "author": "Johan Andersson",
+  "license": "ISC",
+  "devDependencies": {
+    "nock": "^13.0.7",
+    "smee-client": "^1.2.2",
+    "uvu": "^0.5.1"
+  },
+  "release": {
+    "branches": [
+      "main"
+    ]
+  }
+}

@@ -1,0 +1,54 @@
+name: Build and deploy
+
+on:
+  push:
+    tags:
+    - '*'
+  workflow_dispatch:
+
+# Required to get access token for GitHub OIDC to AWS
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-node@v3
+      with:
+        node-version: 16
+        cache: npm
+    - run: npm ci
+    - uses: aws-actions/setup-sam@v2
+    # https://github.com/aws/aws-sam-cli/issues/4527#issuecomment-1368871248
+    - run: $(dirname $(dirname $(which sam)))/.venv/bin/python -m pip install --force-reinstall "cryptography==38.0.4"
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        role-to-assume: ${{ secrets.PIPELINE_EXECUTION_ROLE }}
+        aws-region: eu-west-1
+    - name: sam build
+      run: sam build --use-container
+    - name: sam deploy
+      env:
+        STACK_NAME: github-safe-settings-app
+        ARTIFACT_BUCKET: aws-sam-cli-managed-github-artifactsbucket-0123456789
+        CF_EXECUTION_ROLE: ${{ secrets.CF_EXECUTION_ROLE }}
+        PARAM_WEBHOOK_SECRET: ${{ secrets.APP_WEBHOOK_SECRET }}
+        PARAM_GITHUB_APPID: ${{ secrets.APP_GITHUB_APPID }}
+        PARAM_GITHUB_PRIVATE_KEY: ${{ secrets.APP_GITHUB_APP_KEY }}
+      run: |
+        sam deploy --stack-name $STACK_NAME \
+          --region eu-west-1 \
+          --s3-bucket $ARTIFACT_BUCKET \
+          --capabilities CAPABILITY_IAM \
+          --no-confirm-changeset \
+          --no-fail-on-empty-changeset \
+          --role-arn $CF_EXECUTION_ROLE \
+          --parameter-overrides "\
+          githubWebhookSecret=$PARAM_WEBHOOK_SECRET \
+          githubAppId=$PARAM_GITHUB_APPID \
+          githubPrivateKey='$PARAM_GITHUB_PRIVATE_KEY'"
